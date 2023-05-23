@@ -53,8 +53,8 @@ public class TestController {
     private Map<String, Long> get(int iterations) {
         clearDatabase();
         dataProvider(iterations);
-        long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::findAll);
-        long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::findAll);
+        long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::findAll, false);
+        long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::findAll, false);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -66,11 +66,9 @@ public class TestController {
     private Map<String, Long> post(int iterations) {
         clearDatabase();
         long mongoDuration = measureExecutionTime(iterations, () ->
-                createMongoClass(iterations)
-        );
+                createMongoClass(iterations), true);
         long mysqlDuration = measureExecutionTime(iterations, () ->
-                createMysqlClass(iterations)
-        );
+                createMysqlClass(iterations), true);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -83,8 +81,8 @@ public class TestController {
         clearDatabase();
         dataProvider(iterations);
 
-        Long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::deleteAll);
-        Long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::deleteAll);
+        Long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::deleteAll, false);
+        Long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::deleteAll, false);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -106,7 +104,7 @@ public class TestController {
                 mongoClass.setStudentNumber(21);
                 mongoClassRepository.save(mongoClass);
             });
-        });
+        }, true);
 
         // update MysqlClass
 
@@ -118,7 +116,7 @@ public class TestController {
                 mysqlClass.setStudentNumber(21);
                 mysqlClassRepository.save(mysqlClass);
             });
-        });
+        }, true);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
