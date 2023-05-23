@@ -127,11 +127,14 @@ public class TestController {
         return result;
     }
 
-    private long measureExecutionTime(int iterations, Runnable operation) {
+    private long measureExecutionTime(int iterations, Runnable operation, boolean loop) {
         long startTime = System.currentTimeMillis();
-        for (int i = 0; i < iterations; i++) {
+        if (loop)
+            for (int i = 0; i < iterations; i++) {
+                operation.run();
+            }
+        else
             operation.run();
-        }
         long endTime = System.currentTimeMillis();
         return endTime - startTime;
     }
