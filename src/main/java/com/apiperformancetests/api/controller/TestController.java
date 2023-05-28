@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @RestController
@@ -25,17 +26,21 @@ public class TestController {
     @GetMapping
     public Map<String, Long> customizedTests(
             @RequestParam("method") String method,
-            @RequestParam("iterations") int iterations
+            @RequestParam(value = "iterations", defaultValue = "1") int iterations
     ) {
         switch (method) {
-            case "get":
+            case "get" -> {
                 return this.get(iterations);
-            case "post":
+            }
+            case "post" -> {
                 return this.post(iterations);
-            case "put":
+            }
+            case "put" -> {
                 return this.put(iterations);
-            case "delete":
+            }
+            case "delete" -> {
                 return this.delete(iterations);
+            }
         }
         throw new IllegalArgumentException("Invalid method");
     }
@@ -53,8 +58,8 @@ public class TestController {
     private Map<String, Long> get(int iterations) {
         clearDatabase();
         dataProvider(iterations);
-        long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::findAll, false);
-        long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::findAll, false);
+        long mongoDuration = measureExecutionTime(mongoClassRepository::findAll);
+        long mysqlDuration = measureExecutionTime(mysqlClassRepository::findAll);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -65,10 +70,10 @@ public class TestController {
 
     private Map<String, Long> post(int iterations) {
         clearDatabase();
-        long mongoDuration = measureExecutionTime(iterations, () ->
-                createMongoClass(iterations), true);
-        long mysqlDuration = measureExecutionTime(iterations, () ->
-                createMysqlClass(iterations), true);
+        long mongoDuration = measureExecutionTime(() ->
+                createMongoClass(iterations));
+        long mysqlDuration = measureExecutionTime(() ->
+                createMysqlClass(iterations));
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -81,8 +86,8 @@ public class TestController {
         clearDatabase();
         dataProvider(iterations);
 
-        Long mongoDuration = measureExecutionTime(iterations, mongoClassRepository::deleteAll, false);
-        Long mysqlDuration = measureExecutionTime(iterations, mysqlClassRepository::deleteAll, false);
+        Long mongoDuration = measureExecutionTime(mongoClassRepository::deleteAll);
+        Long mysqlDuration = measureExecutionTime(mysqlClassRepository::deleteAll);
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -96,27 +101,26 @@ public class TestController {
         dataProvider(iterations);
 
         // update MongoClass
-        long mongoDuration = measureExecutionTime(iterations, () -> {
+        long mongoDuration = measureExecutionTime(() -> {
             List<MongoClass> mongoClasses = mongoClassRepository.findAll();
             mongoClasses.forEach(mongoClass -> {
                 mongoClass.setName("newName");
                 mongoClass.setLevel("CM2");
                 mongoClass.setStudentNumber(21);
-                mongoClassRepository.save(mongoClass);
             });
-        }, true);
+            mongoClassRepository.saveAll(mongoClasses); // save all in one go
+        });
 
         // update MysqlClass
-
-        long mysqlDuration = measureExecutionTime(iterations, () -> {
+        long mysqlDuration = measureExecutionTime(() -> {
             List<MysqlClass> mysqlClasses = mysqlClassRepository.findAll();
             mysqlClasses.forEach(mysqlClass -> {
                 mysqlClass.setName("newName");
                 mysqlClass.setLevel("CM2");
                 mysqlClass.setStudentNumber(21);
-                mysqlClassRepository.save(mysqlClass);
             });
-        }, true);
+            mysqlClassRepository.saveAll(mysqlClasses); // save all in one go
+        });
 
         Map<String, Long> result = new HashMap<>();
         result.put("mongo", mongoDuration);
@@ -125,35 +129,31 @@ public class TestController {
         return result;
     }
 
-    private long measureExecutionTime(int iterations, Runnable operation, boolean loop) {
+
+    private long measureExecutionTime(Runnable operation) {
         long startTime = System.currentTimeMillis();
-        if (loop)
-            for (int i = 0; i < iterations; i++) {
-                operation.run();
-            }
-        else
             operation.run();
         long endTime = System.currentTimeMillis();
         return endTime - startTime;
     }
 
     private void createMongoClass(int iterations) {
-        IntStream.range(0, iterations).forEach(i -> {
-            mongoClassRepository.save(new MongoClass(
-                    "name" + i,
-                    "CM1",
-                    20
-            ));
-        });
+        List<MongoClass> mongoClasses = IntStream.range(0, iterations).mapToObj(i -> new MongoClass(
+                "name" + i,
+                "CM1",
+                20
+        )).collect(Collectors.toList());
+
+        mongoClassRepository.saveAll(mongoClasses);
     }
 
     private void createMysqlClass(int iterations) {
-        IntStream.range(0, iterations).forEach(i -> {
-            mysqlClassRepository.save(new MysqlClass(
-                    "name" + i,
-                    "CM1",
-                    20
-            ));
-        });
+        List<MysqlClass> mysqlClasses = IntStream.range(0, iterations).mapToObj(i -> new MysqlClass(
+                "name" + i,
+                "CM1",
+                20
+        )).collect(Collectors.toList());
+
+        mysqlClassRepository.saveAll(mysqlClasses);
     }
 }
